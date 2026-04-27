@@ -44,7 +44,7 @@ resource "azurerm_service_plan" "asp" {
 }
 
 resource "azurerm_mssql_server" "ams" {
-  name                         = var.sql_server_name
+  name                         = "${var.sql_server_name}-${random_integer.ri.result}"
   resource_group_name          = azurerm_resource_group.arg.name
   location                     = azurerm_resource_group.arg.location
   version                      = "12.0"
