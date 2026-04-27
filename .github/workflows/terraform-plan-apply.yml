@@ -2,6 +2,15 @@ name: 'Terraform Plan and Apply'
 
 on:
   workflow_dispatch:
+    inputs:
+      force_new:
+        description: 'Create new resources (yes/no)'
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - yes
+          - no
   workflow_run:
     workflows: ['Terraform Test']
     types: [completed]

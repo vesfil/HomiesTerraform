@@ -28,6 +28,16 @@ provider "azurerm" {
 resource "random_integer" "ri" {
   min = 10000
   max = 99999
+
+  # Това казва на Terraform да създава нов ресурс при всяко apply
+  lifecycle {
+    replace_triggered_by = [
+      # Можеш да добавиш timestamp или друга променлива
+    ]
+  }
+}
+resource "terraform_data" "trigger" {
+  input = timestamp()
 }
 
 resource "azurerm_resource_group" "arg" {
