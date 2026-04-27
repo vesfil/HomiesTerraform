@@ -90,9 +90,9 @@ resource "azurerm_linux_web_app" "alwa" {
   }
 }
 
-resource "azurerm_app_service_source_control" "assc" {
-  app_id                 = azurerm_linux_web_app.alwa.id
-  repo_url               = var.github_repository_url
-  branch                 = "main"
-  use_manual_integration = false
-}
+#resource "azurerm_app_service_source_control" "assc" {
+#  app_id                 = azurerm_linux_web_app.alwa.id
+#  repo_url               = var.github_repository_url
+#  branch                 = "main"
+#  use_manual_integration = false
+#}
