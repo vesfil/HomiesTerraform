@@ -1,10 +1,10 @@
 name: 'Terraform Plan and Apply'
 
 on:
-  workflow_dispatch:  # ДОБАВИ ТОВА - позволява ръчно пускане
+  workflow_dispatch:
   workflow_run:
-    workflows: [ 'Terraform Test' ]
-    types: [ completed ]
+    workflows: ['Terraform Test']
+    types: [completed]
 
 env:
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -12,6 +12,7 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   ARM_ACCESS_KEY: ${{ secrets.AZURE_STORAGE_ACCESS_KEY }}
+  DOTNET_VERSION: '6.0.x'  # Добавена версията на .NET
 
 jobs:
   terraform_plan:
@@ -66,3 +67,51 @@ jobs:
 
     - name: Terraform Apply
       run: terraform apply -auto-approve tfplan
+
+    # 👇 НОВА СТЪПКА - Взема името на web app-а от Terraform
+    - name: Get Web App Name from Terraform
+      id: webapp
+      run: |
+        # Вземи името на web app-а от Terraform state
+        WEBAPP_NAME=$(terraform output -raw web_app_name 2>/dev/null || az webapp list --resource-group "rg-homies-$(terraform output -raw random_suffix 2>/dev/null || echo '73297')" --query "[0].name" -o tsv)
+        RESOURCE_GROUP=$(terraform output -raw resource_group_name 2>/dev/null || echo "rg-homies-73297")
+        echo "webapp_name=$WEBAPP_NAME" >> $GITHUB_OUTPUT
+        echo "resource_group=$RESOURCE_GROUP" >> $GITHUB_OUTPUT
+        echo "Web App Name: $WEBAPP_NAME"
+        echo "Resource Group: $RESOURCE_GROUP"
+
+    # 👇 СТЪПКА ЗА DEPLOY НА ПРИЛОЖЕНИЕТО
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Clone and build Homies app
+      run: |
+        # Клонирай Homies repository
+        git clone https://github.com/vesfil/Homies.git
+        cd Homies
+        
+        # Възстанови зависимости
+        dotnet restore
+        
+        # Build
+        dotnet build --configuration Release --no-restore
+        
+        # Publish
+        dotnet publish --configuration Release --output ../publish
+        
+        cd ..
+        ls -la publish/
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ steps.webapp.outputs.webapp_name }}
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: ./publish
+
+    - name: Verify deployment
+      run: |
+        echo "✅ Infrastructure and application deployed successfully!"
+        echo "📍 Your app is available at: https://${{ steps.webapp.outputs.webapp_name }}.azurewebsites.net"

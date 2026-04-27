@@ -96,3 +96,18 @@ resource "azurerm_linux_web_app" "alwa" {
 #  branch                 = "main"
 #  use_manual_integration = false
 #}
+
+output "web_app_name" {
+  description = "The name of the deployed web app"
+  value       = azurerm_linux_web_app.alwa.name
+}
+
+output "resource_group_name" {
+  description = "The name of the resource group"
+  value       = azurerm_resource_group.arg.name
+}
+
+output "random_suffix" {
+  description = "The random suffix used for resources"
+  value       = random_integer.ri.result
+}
