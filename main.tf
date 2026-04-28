@@ -31,13 +31,12 @@ resource "random_integer" "ri" {
 }
 
 resource "terraform_data" "trigger" {
-  # Винаги се променя при force_new
-  input = var.force_new ? timestamp() : "stable"
+  input = timestamp()
 }
 
 resource "azurerm_resource_group" "arg" {
   name     = "${var.resource_group_name}-${random_integer.ri.result}"
-  location = "spaincentral"
+  location = "westeurope"
 }
 
 resource "azurerm_service_plan" "asp" {
@@ -54,7 +53,7 @@ resource "azurerm_mssql_server" "ams" {
   location                     = azurerm_resource_group.arg.location
   version                      = "12.0"
   administrator_login          = "missadministrator"
-  administrator_login_password = "thisIsKat11!23" # Твоята статична парола
+  administrator_login_password = "thisIsKat11!23"
   minimum_tls_version          = "1.2"
 }
 
@@ -87,22 +86,15 @@ resource "azurerm_linux_web_app" "alwa" {
       dotnet_version = "6.0"
     }
     always_on = false
-
     app_command_line = "dotnet Homies.dll"
   }
+
   connection_string {
     name  = "DefaultConnection"
     type  = "SQLAzure"
     value = "Data Source=tcp:${azurerm_mssql_server.ams.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.amd.name};User ID=${azurerm_mssql_server.ams.administrator_login};Password=thisIsKat11!23;Trusted_Connection=False;MultipleActiveResultSets=True;Encrypt=True;"
   }
 }
-
-#resource "azurerm_app_service_source_control" "assc" {
-#  app_id                 = azurerm_linux_web_app.alwa.id
-#  repo_url               = var.github_repository_url
-#  branch                 = "main"
-#  use_manual_integration = false
-#}
 
 output "web_app_name" {
   description = "The name of the deployed web app"
