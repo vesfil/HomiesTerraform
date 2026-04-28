@@ -7,7 +7,7 @@ variable "resource_group_name" {
 variable "location" {
   type        = string
   description = "Azure region"
-  default     = "westeurope"
+  default     = "francecentral"
 }
 
 variable "app_service_plan_name" {
