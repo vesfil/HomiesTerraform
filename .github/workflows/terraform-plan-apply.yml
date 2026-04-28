@@ -123,8 +123,11 @@ jobs:
         git config user.email "actions@github.com"
         git config user.name "GitHub Actions"
         git commit -m "Deploy from GitHub Actions - $(date -u)"
+
+        #4. 🔧 Промени това: създай master branch
+        git branch -M master
         
-        # 4. Push към Azure Web App
+        # 5 Push към Azure Web App
         echo "🚀 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
         git push https://${{ secrets.AZURE_WEBAPP_DEPLOY_USER }}:${{ secrets.AZURE_WEBAPP_DEPLOY_PASSWORD }}@${{ steps.webapp.outputs.webapp_name }}.scm.azurewebsites.net/${{ steps.webapp.outputs.webapp_name }}.git main --force
         
