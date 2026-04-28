@@ -81,16 +81,12 @@ jobs:
         dotnet publish --configuration Release --output ../publish
         cd ..
         
-        echo "📦 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
-        cd publish
-        git init
-        git add .
-        git config user.email "actions@github.com"
-        git config user.name "GitHub Actions"
-        git commit -m "Deploy from GitHub Actions"
-        git branch -M master
-        git push https://${{ secrets.AZURE_WEBAPP_DEPLOY_USER }}:${{ secrets.AZURE_WEBAPP_DEPLOY_PASSWORD }}@${{ steps.webapp.outputs.webapp_name }}.scm.azurewebsites.net/${{ steps.webapp.outputs.webapp_name }}.git master --force
-        cd ..
+        echo "🚀 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
+        az webapp deploy \
+          --resource-group ${{ steps.webapp.outputs.resource_group }} \
+          --name ${{ steps.webapp.outputs.webapp_name }} \
+          --src-path ./publish \
+          --type zip
         
         echo "✅ Deployment completed!"
 
