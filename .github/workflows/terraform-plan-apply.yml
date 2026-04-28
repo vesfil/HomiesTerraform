@@ -4,13 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       force_new:
-        description: 'Create new resources (yes/no)'
-        required: true
-        default: 'no'
-        type: choice
-        options:
-          - yes
-          - no
+        description: 'Create NEW resources with fresh random suffix'
+        required: false
+        default: 'false'
+        type: boolean
   workflow_run:
     workflows: ['Terraform Test']
     types: [completed]
@@ -21,43 +18,16 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   ARM_ACCESS_KEY: ${{ secrets.AZURE_STORAGE_ACCESS_KEY }}
-  DOTNET_VERSION: '6.0.x'  # Добавена версията на .NET
+  DOTNET_VERSION: '6.0.x'
 
 jobs:
-  terraform_plan:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout the repository
-      uses: actions/checkout@v4
-
-    - name: Login to Azure via Azure CLI
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v4
-
-    - name: Terraform Init
-      run: terraform init
-
-    - name: Terraform Plan
-      run: terraform plan -out=tfplan
-
-    - name: Save Terraform Plan as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: tfplan
-        path: tfplan
-
   terraform_apply:
-    needs: terraform_plan
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
       uses: actions/checkout@v4
 
-    - name: Login to Azure via Azure CLI
+    - name: Login to Azure
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -65,51 +35,38 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v4
 
-    - name: Download Terraform Plan artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: tfplan
-        path: .
+    - name: Force new random suffix
+      if: github.event.inputs.force_new == 'true'
+      run: |
+        echo "🔄 Forcing new random suffix..."
+        terraform init
+        terraform state rm random_integer.ri || true
+        rm -f terraform.tfstate*
 
-    - name: Terraform Init
-      run: terraform init
+    - name: Terraform Init & Apply
+      run: |
+        terraform init
+        terraform apply -auto-approve
 
-    - name: Terraform Apply
-      run: terraform apply -auto-approve tfplan
-
-    # 👇 НОВА СТЪПКА - Взема името на web app-а от Terraform
-    - name: Get Web App Name from Terraform
+    - name: Get Web App Name
       id: webapp
       run: |
-        # Вземи името на web app-а от Terraform state
-        WEBAPP_NAME=$(terraform output -raw web_app_name 2>/dev/null || az webapp list --resource-group "rg-homies-$(terraform output -raw random_suffix 2>/dev/null || echo '73297')" --query "[0].name" -o tsv)
-        RESOURCE_GROUP=$(terraform output -raw resource_group_name 2>/dev/null || echo "rg-homies-73297")
+        WEBAPP_NAME=$(terraform output -raw web_app_name)
         echo "webapp_name=$WEBAPP_NAME" >> $GITHUB_OUTPUT
-        echo "resource_group=$RESOURCE_GROUP" >> $GITHUB_OUTPUT
         echo "Web App Name: $WEBAPP_NAME"
-        echo "Resource Group: $RESOURCE_GROUP"
 
-    # 👇 СТЪПКА ЗА DEPLOY НА ПРИЛОЖЕНИЕТО
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Clone and build Homies app
+    - name: Build and Publish App from HomiesActions
       run: |
-        # Клонирай Homies repository
-        git clone https://github.com/vesfil/Homies.git
-        cd Homies
-        
-        # Възстанови зависимости
+        git clone https://github.com/vesfil/HomiesActions.git
+        cd HomiesActions
         dotnet restore
-        
-        # Build
         dotnet build --configuration Release --no-restore
-        
-        # Publish
         dotnet publish --configuration Release --output ../publish
-        
         cd ..
         ls -la publish/
 
@@ -122,5 +79,4 @@ jobs:
 
     - name: Verify deployment
       run: |
-        echo "✅ Infrastructure and application deployed successfully!"
-        echo "📍 Your app is available at: https://${{ steps.webapp.outputs.webapp_name }}.azurewebsites.net"
+        echo "✅ Successfully deployed to: https://${{ steps.webapp.outputs.webapp_name }}.azurewebsites.net"
