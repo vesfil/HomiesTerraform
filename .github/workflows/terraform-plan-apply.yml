@@ -24,7 +24,34 @@ env:
   DOTNET_VERSION: '6.0.x'
 
 jobs:
+  terraform_plan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v4
+
+    - name: Login to Azure via Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v4
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan
+      run: terraform plan -out=tfplan
+
+    - name: Save Terraform Plan as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: tfplan
+        path: tfplan
+
   terraform_apply:
+    needs: terraform_plan
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
@@ -38,51 +65,77 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v4
 
+    - name: Download Terraform Plan artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: tfplan
+        path: .
+
     - name: Force New Resources
       if: github.event.inputs.force_new == 'yes'
       run: |
         echo "⚠️ FORCE NEW MODE - Destroying old resources..."
         terraform init
-        terraform destroy -auto-approve || true
-        terraform state rm random_integer.ri || true
+        terraform destroy -auto-approve
         rm -f terraform.tfstate*
+        rm -rf .terraform
         echo "✅ Old resources destroyed"
 
-    - name: Terraform Init
-      run: terraform init
-
-    - name: Terraform Apply
-      run: terraform apply -auto-approve
+    - name: Terraform Init & Apply
+      run: |
+        terraform init
+        terraform apply -auto-approve tfplan
 
     - name: Get Web App Name
       id: webapp
       run: |
         WEBAPP_NAME=$(terraform output -raw web_app_name)
+        RESOURCE_GROUP=$(terraform output -raw resource_group_name)
         echo "webapp_name=$WEBAPP_NAME" >> $GITHUB_OUTPUT
+        echo "resource_group=$RESOURCE_GROUP" >> $GITHUB_OUTPUT
         echo "Web App Name: $WEBAPP_NAME"
+        echo "Resource Group: $RESOURCE_GROUP"
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Build and Deploy HomiesActions
+    - name: Clone, Build and Deploy HomiesActions
       run: |
+        # 1. Клонирай HomiesActions
+        echo "📥 Cloning HomiesActions repository..."
         git clone https://github.com/vesfil/HomiesActions.git
+        
+        # 2. Влез в директорията и build-вай
         cd HomiesActions
+        echo "🔨 Building and publishing application..."
         dotnet restore
         dotnet build --configuration Release --no-restore
         dotnet publish --configuration Release --output ../publish
         cd ..
         
+        # 3. Подготви publish папката за git push
+        echo "📦 Preparing git deployment..."
         cd publish
         git init
         git add .
         git config user.email "actions@github.com"
         git config user.name "GitHub Actions"
         git commit -m "Deploy from GitHub Actions - $(date -u)"
+
+        #4. 🔧 Промени това: създай master branch
         git branch -M master
-        git push https://${{ secrets.AZURE_WEBAPP_DEPLOY_USER }}:${{ secrets.AZURE_WEBAPP_DEPLOY_PASSWORD }}@${{ steps.webapp.outputs.webapp_name }}.scm.azurewebsites.net/${{ steps.webapp.outputs.webapp_name }}.git master --force
-        cd ..
         
-        echo "✅ Deployed to: https://${{ steps.webapp.outputs.webapp_name }}.azurewebsites.net"
+        # 5 Push към Azure Web App
+        echo "🚀 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
+        git push https://${{ secrets.AZURE_WEBAPP_DEPLOY_USER }}:${{ secrets.AZURE_WEBAPP_DEPLOY_PASSWORD }}@${{ steps.webapp.outputs.webapp_name }}.scm.azurewebsites.net/${{ steps.webapp.outputs.webapp_name }}.git master --force
+        
+        cd ..
+        echo "✅ Deployment completed!"
+
+    - name: Verify deployment
+      run: |
+        echo "✅ Infrastructure and application deployed successfully!"
+        echo "📍 Your app is available at: https://${{ steps.webapp.outputs.webapp_name }}.azurewebsites.net"
+        echo "📊 Monitor status in Azure Portal"
