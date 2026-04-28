@@ -27,7 +27,7 @@ jobs:
   terraform_apply:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout the repository
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Login to Azure
@@ -44,12 +44,10 @@ jobs:
         echo "⚠️ FORCE NEW MODE - Destroying old resources..."
         terraform init
         terraform destroy -auto-approve || true
+        az storage blob delete --container-name homiescontainer --name terraform.tfstate --account-name hmstorage2026 --auth-mode login || true
         rm -f terraform.tfstate*
         rm -rf .terraform
         echo "✅ Old resources destroyed, state cleared"
-        
-    - name: Terraform Refresh
-      run: terraform refresh
 
     - name: Terraform Init
       run: terraform init
@@ -72,31 +70,28 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Clone, Build and Deploy HomiesActions
+    - name: Build and Deploy HomiesActions
       run: |
-        echo "📥 Cloning HomiesActions repository..."
+        echo "📥 Cloning HomiesActions..."
         git clone https://github.com/vesfil/HomiesActions.git
-        
         cd HomiesActions
-        echo "🔨 Building and publishing application..."
+        echo "🔨 Building..."
         dotnet restore
         dotnet build --configuration Release --no-restore
         dotnet publish --configuration Release --output ../publish
         cd ..
         
-        echo "📦 Preparing git deployment..."
+        echo "📦 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
         cd publish
         git init
         git add .
         git config user.email "actions@github.com"
         git config user.name "GitHub Actions"
-        git commit -m "Deploy from GitHub Actions - $(date -u)"
+        git commit -m "Deploy from GitHub Actions"
         git branch -M master
-        
-        echo "🚀 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
         git push https://${{ secrets.AZURE_WEBAPP_DEPLOY_USER }}:${{ secrets.AZURE_WEBAPP_DEPLOY_PASSWORD }}@${{ steps.webapp.outputs.webapp_name }}.scm.azurewebsites.net/${{ steps.webapp.outputs.webapp_name }}.git master --force
-        
         cd ..
+        
         echo "✅ Deployment completed!"
 
     - name: Verify deployment
