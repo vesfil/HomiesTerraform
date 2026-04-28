@@ -47,6 +47,9 @@ jobs:
         rm -f terraform.tfstate*
         rm -rf .terraform
         echo "✅ Old resources destroyed, state cleared"
+        
+    - name: Terraform Refresh
+      run: terraform refresh
 
     - name: Terraform Init
       run: terraform init
