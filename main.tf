@@ -42,7 +42,7 @@ resource "terraform_data" "trigger" {
 
 resource "azurerm_resource_group" "arg" {
   name     = "${var.resource_group_name}-${random_integer.ri.result}"
-  location = "swedencentral"
+  location = var.location
 }
 
 resource "azurerm_service_plan" "asp" {
@@ -58,8 +58,8 @@ resource "azurerm_mssql_server" "ams" {
   resource_group_name          = azurerm_resource_group.arg.name
   location                     = azurerm_resource_group.arg.location
   version                      = "12.0"
-  administrator_login          = "missadministrator"
-  administrator_login_password = "thisIsKat11!23" # Твоята статична парола
+  administrator_login          = var.sql_admin_username
+  administrator_login_password = var.sql_admin_password
   minimum_tls_version          = "1.2"
 }
 
@@ -102,24 +102,24 @@ resource "azurerm_linux_web_app" "alwa" {
   }
 }
 
-#resource "azurerm_app_service_source_control" "assc" {
-#  app_id                 = azurerm_linux_web_app.alwa.id
-#  repo_url               = var.github_repository_url
-#  branch                 = "main"
-#  use_manual_integration = false
+resource "azurerm_app_service_source_control" "assc" {
+  app_id                 = azurerm_linux_web_app.alwa.id
+  repo_url               = var.github_repository_url
+  branch                 = "main"
+  use_manual_integration = false
+}
+
+#utput "web_app_name" {
+# description = "The name of the deployed web app"
+# value       = azurerm_linux_web_app.alwa.name
 #}
 
-output "web_app_name" {
-  description = "The name of the deployed web app"
-  value       = azurerm_linux_web_app.alwa.name
-}
+#utput "resource_group_name" {
+# description = "The name of the resource group"
+# value       = azurerm_resource_group.arg.name
+#
 
-output "resource_group_name" {
-  description = "The name of the resource group"
-  value       = azurerm_resource_group.arg.name
-}
-
-output "random_suffix" {
-  description = "The random suffix used for resources"
-  value       = random_integer.ri.result
-}
+#utput "random_suffix" {
+# description = "The random suffix used for resources"
+# value       = random_integer.ri.result
+#}

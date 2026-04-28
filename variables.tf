@@ -55,7 +55,7 @@ variable "firewall_rule_name" {
 
 variable "github_repository_url" {
   type        = string
-  description = "GitHub repository URL"
+  description = "https://github.com/vesfil/HomiesTerraform"
 }
 
 variable "force_new" {
