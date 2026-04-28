@@ -81,14 +81,19 @@ jobs:
         dotnet publish --configuration Release --output ${{ github.workspace }}/publish
         cd ${{ github.workspace }}
         
-        echo "📂 Contents of publish folder:"
-        ls -la publish/
+        echo "📦 Creating ZIP package..."
+        cd publish
+        zip -r ../app.zip .
+        cd ..
+        
+        echo "📂 ZIP size:"
+        ls -la app.zip
         
         echo "🚀 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
         az webapp deploy \
           --resource-group ${{ steps.webapp.outputs.resource_group }} \
           --name ${{ steps.webapp.outputs.webapp_name }} \
-          --src-path ${{ github.workspace }}/publish \
+          --src-path ${{ github.workspace }}/app.zip \
           --type zip
         
         echo "✅ Deployment completed!"
