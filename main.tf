@@ -85,7 +85,7 @@ resource "azurerm_linux_web_app" "alwa" {
     application_stack {
       dotnet_version = "6.0"
     }
-    always_on = false
+    always_on        = false
     app_command_line = "dotnet Homies.dll"
   }
 
