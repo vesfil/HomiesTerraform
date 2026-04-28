@@ -42,7 +42,7 @@ resource "terraform_data" "trigger" {
 
 resource "azurerm_resource_group" "arg" {
   name     = "${var.resource_group_name}-${random_integer.ri.result}"
-  location = var.location
+  location = "switzerlandnorth"
 }
 
 resource "azurerm_service_plan" "asp" {
@@ -102,12 +102,12 @@ resource "azurerm_linux_web_app" "alwa" {
   }
 }
 
-resource "azurerm_app_service_source_control" "assc" {
-  app_id                 = azurerm_linux_web_app.alwa.id
-  repo_url               = var.github_repository_url
-  branch                 = "main"
-  use_manual_integration = false
-}
+#source "azurerm_app_service_source_control" "assc" {
+# app_id                 = azurerm_linux_web_app.alwa.id
+#repo_url               = var.github_repository_url
+# branch                 = "main"
+# use_manual_integration = false
+#}
 
 #utput "web_app_name" {
 # description = "The name of the deployed web app"
