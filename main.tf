@@ -36,7 +36,7 @@ resource "terraform_data" "trigger" {
 
 resource "azurerm_resource_group" "arg" {
   name     = "${var.resource_group_name}-${random_integer.ri.result}"
-  location = "westeurope"
+  location = "spaincentral"
 }
 
 resource "azurerm_service_plan" "asp" {
