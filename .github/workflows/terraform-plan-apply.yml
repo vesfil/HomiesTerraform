@@ -90,7 +90,18 @@ jobs:
         else
           terraform apply -auto-approve tfplan
         fi
-
+                              
+    - name: Force New Resources
+      if: github.event.inputs.force_new == 'yes'
+      run: |
+        echo "⚠️ FORCE NEW MODE - Destroying old resources..."
+        terraform init
+        terraform destroy -auto-approve || true
+        # Това ще изтрие числото от state
+        terraform state rm random_integer.ri || true
+        rm -f terraform.tfstate*
+        echo "✅ Old resources destroyed, random_integer removed from state"
+        
     - name: Get Web App Name
       id: webapp
       run: |
