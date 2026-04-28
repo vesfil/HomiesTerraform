@@ -129,7 +129,7 @@ jobs:
         
         # 5 Push към Azure Web App
         echo "🚀 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
-        git push https://${{ secrets.AZURE_WEBAPP_DEPLOY_USER }}:${{ secrets.AZURE_WEBAPP_DEPLOY_PASSWORD }}@${{ steps.webapp.outputs.webapp_name }}.scm.azurewebsites.net/${{ steps.webapp.outputs.webapp_name }}.git main --force
+        git push https://${{ secrets.AZURE_WEBAPP_DEPLOY_USER }}:${{ secrets.AZURE_WEBAPP_DEPLOY_PASSWORD }}@${{ steps.webapp.outputs.webapp_name }}.scm.azurewebsites.net/${{ steps.webapp.outputs.webapp_name }}.git master --force
         
         cd ..
         echo "✅ Deployment completed!"
