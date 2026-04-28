@@ -30,10 +30,6 @@ resource "random_integer" "ri" {
   max = 99999
 }
 
-resource "terraform_data" "trigger" {
-  input = timestamp()
-}
-
 resource "azurerm_resource_group" "arg" {
   name     = "${var.resource_group_name}-${random_integer.ri.result}"
   location = "spaincentral"
