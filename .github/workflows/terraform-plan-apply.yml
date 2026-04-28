@@ -24,34 +24,7 @@ env:
   DOTNET_VERSION: '6.0.x'
 
 jobs:
-  terraform_plan:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout the repository
-      uses: actions/checkout@v4
-
-    - name: Login to Azure via Azure CLI
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v4
-
-    - name: Terraform Init
-      run: terraform init
-
-    - name: Terraform Plan
-      run: terraform plan -out=tfplan
-
-    - name: Save Terraform Plan as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: tfplan
-        path: tfplan
-
   terraform_apply:
-    needs: terraform_plan
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
@@ -65,26 +38,21 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v4
 
-    - name: Download Terraform Plan artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: tfplan
-        path: .
-
     - name: Force New Resources
       if: github.event.inputs.force_new == 'yes'
       run: |
         echo "⚠️ FORCE NEW MODE - Destroying old resources..."
         terraform init
-        terraform destroy -auto-approve
+        terraform destroy -auto-approve || true
         rm -f terraform.tfstate*
         rm -rf .terraform
-        echo "✅ Old resources destroyed"
+        echo "✅ Old resources destroyed, state cleared"
 
-    - name: Terraform Init & Apply
-      run: |
-        terraform init
-        terraform apply -auto-approve tfplan
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
 
     - name: Get Web App Name
       id: webapp
@@ -103,11 +71,9 @@ jobs:
 
     - name: Clone, Build and Deploy HomiesActions
       run: |
-        # 1. Клонирай HomiesActions
         echo "📥 Cloning HomiesActions repository..."
         git clone https://github.com/vesfil/HomiesActions.git
         
-        # 2. Влез в директорията и build-вай
         cd HomiesActions
         echo "🔨 Building and publishing application..."
         dotnet restore
@@ -115,7 +81,6 @@ jobs:
         dotnet publish --configuration Release --output ../publish
         cd ..
         
-        # 3. Подготви publish папката за git push
         echo "📦 Preparing git deployment..."
         cd publish
         git init
@@ -123,11 +88,8 @@ jobs:
         git config user.email "actions@github.com"
         git config user.name "GitHub Actions"
         git commit -m "Deploy from GitHub Actions - $(date -u)"
-
-        #4. 🔧 Промени това: създай master branch
         git branch -M master
         
-        # 5 Push към Azure Web App
         echo "🚀 Deploying to ${{ steps.webapp.outputs.webapp_name }}..."
         git push https://${{ secrets.AZURE_WEBAPP_DEPLOY_USER }}:${{ secrets.AZURE_WEBAPP_DEPLOY_PASSWORD }}@${{ steps.webapp.outputs.webapp_name }}.scm.azurewebsites.net/${{ steps.webapp.outputs.webapp_name }}.git master --force
         
@@ -138,4 +100,3 @@ jobs:
       run: |
         echo "✅ Infrastructure and application deployed successfully!"
         echo "📍 Your app is available at: https://${{ steps.webapp.outputs.webapp_name }}.azurewebsites.net"
-        echo "📊 Monitor status in Azure Portal"
