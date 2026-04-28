@@ -7,7 +7,7 @@ variable "resource_group_name" {
 variable "location" {
   type        = string
   description = "Azure region"
-  default     = "swedencentral"
+  default     = "spaincentral"
 }
 
 variable "app_service_plan_name" {
@@ -56,4 +56,9 @@ variable "firewall_rule_name" {
 variable "github_repository_url" {
   type        = string
   description = "GitHub repository URL"
+}
+
+variable "force_new" {
+  type    = bool
+  default = false
 }

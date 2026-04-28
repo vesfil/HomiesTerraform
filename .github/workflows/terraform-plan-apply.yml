@@ -83,8 +83,13 @@ jobs:
 
     - name: Terraform Init & Apply
       run: |
-        terraform init
-        terraform apply -auto-approve tfplan
+       #terraform init
+       #terraform apply -auto-approve tfplan
+        if [ "${{ github.event.inputs.force_new }}" == "yes" ]; then
+          terraform apply -auto-approve tfplan -var="force_new=true"
+        else
+          terraform apply -auto-approve tfplan
+        fi
 
     - name: Get Web App Name
       id: webapp

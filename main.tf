@@ -32,17 +32,18 @@ resource "random_integer" "ri" {
   # Това казва на Terraform да създава нов ресурс при всяко apply
   lifecycle {
     replace_triggered_by = [
-      # Можеш да добавиш timestamp или друга променлива
+      terraform_data.ri_trigger
     ]
   }
 }
 resource "terraform_data" "trigger" {
-  input = timestamp()
+  # Винаги се променя при force_new
+  input = var.force_new ? timestamp() : "stable"
 }
 
 resource "azurerm_resource_group" "arg" {
   name     = "${var.resource_group_name}-${random_integer.ri.result}"
-  location = "swedencentral"
+  location = "spaincentral"
 }
 
 resource "azurerm_service_plan" "asp" {
