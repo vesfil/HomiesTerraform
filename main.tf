@@ -92,6 +92,8 @@ resource "azurerm_linux_web_app" "alwa" {
       dotnet_version = "6.0"
     }
     always_on = false
+
+    app_command_line = "dotnet Homies.dll"
   }
   connection_string {
     name  = "DefaultConnection"
